@@ -1,7 +1,15 @@
-import { ID, Query } from "appwrite";
+import { ID, Models, Query } from "appwrite";
 
 import { appwriteConfig, account, databases, storage, avatars } from "./config";
-import { IUpdatePost, INewPost, INewUser, IUpdateUser } from "@/types";
+import {
+  IUpdatePost,
+  INewPost,
+  INewUser,
+  IUpdateUser,
+  Followers,
+  INewTeam,
+  Team,
+} from "@/types";
 
 // ============================================================
 // AUTH
@@ -27,6 +35,7 @@ export async function createUserAccount(user: INewUser) {
       email: newAccount.email,
       username: user.username,
       imageUrl: avatarUrl,
+      role: user.role,
     });
 
     return newUser;
@@ -41,6 +50,7 @@ export async function saveUserToDB(user: {
   accountId: string;
   email: string;
   name: string;
+  role: string;
   imageUrl: URL;
   username?: string;
 }) {
@@ -147,6 +157,7 @@ export async function createPost(post: INewPost) {
         imageId: uploadedFile.$id,
         location: post.location,
         tags: tags,
+        team: post.team_id ? post.team_id : null,
       }
     );
 
@@ -159,6 +170,74 @@ export async function createPost(post: INewPost) {
   } catch (error) {
     console.log(error);
   }
+}
+
+export async function newFollow(follower: Followers): Promise<boolean> {
+  let follow: boolean = false;
+  try {
+    const existingFollow = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.followersCellectiondId,
+      [
+        Query.equal("user", follower.user),
+        Query.equal("follower", follower.follower),
+      ]
+    );
+
+    if (!existingFollow.total) {
+      // Create post
+      const newFollower = await databases.createDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.followersCellectiondId,
+        ID.unique(),
+        {
+          user: follower.user,
+          follower: follower.follower,
+        }
+      );
+      if (newFollower.$id) {
+        follow = true;
+      }
+    }
+  } catch (error) {
+    console.log(error);
+  }
+
+  return follow;
+}
+
+export async function unFollow(follower: Followers): Promise<boolean> {
+  let unFollow: boolean = false;
+
+  try {
+    const existingFollow = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.followersCellectiondId,
+      [
+        Query.equal("user", follower.user),
+        Query.equal("follower", follower.follower),
+      ]
+    );
+
+    if (existingFollow.total > 0) {
+      const documentId = existingFollow.documents[0].$id; // Get the document ID
+
+      // Delete the follow relationship
+      await databases.deleteDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.followersCellectiondId,
+        documentId // Use the document ID for deletion
+      );
+      unFollow = true;
+    } else {
+      console.log("Follow relationship does not exist");
+    }
+  } catch (error) {
+    unFollow = false;
+    console.log(error);
+  }
+
+  return unFollow;
 }
 
 // ============================== UPLOAD FILE
@@ -213,7 +292,11 @@ export async function searchPosts(searchTerm: string) {
     const posts = await databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.postCollectionId,
-      [Query.search("caption", searchTerm)]
+      [
+        !searchTerm.startsWith("#")
+          ? Query.search("caption", searchTerm)
+          : Query.search("tags", searchTerm.replace("#", "")),
+      ]
     );
 
     if (!posts) throw Error;
@@ -224,8 +307,44 @@ export async function searchPosts(searchTerm: string) {
   }
 }
 
+export async function getAllFollowers(userId: string) {
+  try {
+    const followers = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.followersCellectiondId,
+      [Query.equal("user", userId)]
+    );
+
+    if (!followers) throw Error;
+
+    return followers;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function getAllFollowing(userId: string) {
+  try {
+    const followers = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.followersCellectiondId,
+      [Query.equal("follower", userId)]
+    );
+
+    if (!followers) throw Error;
+
+    return followers;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
 export async function getInfinitePosts({ pageParam }: { pageParam: number }) {
-  const queries: any[] = [Query.orderDesc("$updatedAt"), Query.limit(9)];
+  const queries: any[] = [
+    Query.orderDesc("$updatedAt"),
+    Query.limit(9),
+    Query.isNull('team')
+  ];
 
   if (pageParam) {
     queries.push(Query.cursorAfter(pageParam.toString()));
@@ -415,7 +534,7 @@ export async function getUserPosts(userId?: string) {
     const post = await databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.postCollectionId,
-      [Query.equal("creator", userId), Query.orderDesc("$createdAt")]
+      [Query.equal("creator", userId), Query.orderDesc("$createdAt"), Query.isNull('team')]
     );
 
     if (!post) throw Error;
@@ -432,7 +551,7 @@ export async function getRecentPosts() {
     const posts = await databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.postCollectionId,
-      [Query.orderDesc("$createdAt"), Query.limit(20)]
+      [Query.orderDesc("$createdAt"), Query.limit(20), Query.isNull('team')]
     );
 
     if (!posts) throw Error;
@@ -448,8 +567,11 @@ export async function getRecentPosts() {
 // ============================================================
 
 // ============================== GET USERS
-export async function getUsers(limit?: number) {
-  const queries: any[] = [Query.orderDesc("$createdAt")];
+export async function getUsers(userId: string, limit?: number) {
+  const queries: any[] = [
+    Query.notEqual("$id", userId),
+    Query.orderDesc("$createdAt"),
+  ];
 
   if (limit) {
     queries.push(Query.limit(limit));
@@ -464,7 +586,7 @@ export async function getUsers(limit?: number) {
 
     if (!users) throw Error;
 
-    return users;
+    return users || [];
   } catch (error) {
     console.log(error);
   }
@@ -540,6 +662,83 @@ export async function updateUser(user: IUpdateUser) {
     }
 
     return updatedUser;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function createTeam(team: INewTeam) {
+  try {
+    let uploadedFile: Models.File | undefined;
+    let fileUrl: URL | undefined;
+    // Upload file to appwrite storage
+    if (team.cover_picture && team.cover_picture.length) {
+      uploadedFile = await uploadFile(team.cover_picture[0]);
+      if (!uploadedFile) throw Error;
+
+      fileUrl = getFilePreview(uploadedFile.$id);
+      if (!fileUrl) {
+        await deleteFile(uploadedFile.$id);
+        throw Error;
+      }
+    }
+
+    // Convert tags into array
+    const tags = team.tags?.replace(/ /g, "").split(",") || [];
+    const newTeam = await databases.createDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.teamCollectionId,
+      ID.unique(),
+      {
+        admin: team.admin,
+        cover_picture: fileUrl ? fileUrl : null,
+        tags: tags,
+        name: team.name,
+        member_counter: team.member_counter,
+      }
+    );
+
+    if (!newTeam && uploadedFile) {
+      await deleteFile(uploadedFile.$id);
+      throw Error;
+    }
+
+    return newTeam;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function getUserTeams(admin: string) {
+  if (!admin) throw Error;
+
+  try {
+    const teams = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.teamCollectionId,
+      [Query.equal("admin", admin)]
+    );
+
+    if (!teams) throw Error;
+
+    return teams;
+  } catch (error) {
+    console.log(error);
+  }
+}
+export async function getTeamById(team_id?: string) {
+  if (!team_id) throw Error;
+
+  try {
+    const team = await databases.getDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.teamCollectionId,
+      team_id
+    );
+
+    if (!team) throw Error;
+
+    return team;
   } catch (error) {
     console.log(error);
   }

@@ -19,7 +19,21 @@ export type INewPost = {
   file: File[];
   location?: string;
   tags?: string;
+  team_id: string | null;
 };
+
+export type INewTeam = {
+  admin: string;
+  tags: string;
+  cover_picture: File[];
+  name: string;
+  member_counter: number;
+};
+
+export type Followers = {
+  user: string;
+  follower: string
+}
 
 export type IUpdatePost = {
   postId: string;
@@ -38,6 +52,7 @@ export type IUser = {
   email: string;
   imageUrl: string;
   bio: string;
+  role: string;
 };
 
 export type INewUser = {
@@ -45,4 +60,16 @@ export type INewUser = {
   email: string;
   username: string;
   password: string;
+  role: string;
 };
+
+
+export type Team = {
+  id: string;
+  name: string;
+  members: string[];
+  member_counter: number;
+  cover_picture: string;
+  admin: string;
+  tags: string[]
+}

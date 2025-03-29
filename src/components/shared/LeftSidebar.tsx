@@ -11,7 +11,7 @@ const LeftSidebar = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { user, setUser, setIsAuthenticated, isLoading } = useUserContext();
-
+  
   const { mutate: signOut } = useSignOutAccount();
 
   const handleSignOut = async (
@@ -55,7 +55,7 @@ const LeftSidebar = () => {
         )}
 
         <ul className="flex flex-col gap-6">
-          {sidebarLinks.map((link: INavLink) => {
+          {sidebarLinks.filter(link => link.role.includes(user.role) ).map((link: INavLink) => {
             const isActive = pathname === link.route;
 
             return (

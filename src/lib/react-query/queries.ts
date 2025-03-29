@@ -25,8 +25,16 @@ import {
   searchPosts,
   savePost,
   deleteSavedPost,
+  newFollow,
+  getAllFollowers,
+  getAllFollowing,
+  unFollow,
+  createTeam,
+  getUserTeams,
+  getTeamById,
 } from "@/lib/appwrite/api";
-import { INewPost, INewUser, IUpdatePost, IUpdateUser } from "@/types";
+import { Followers, INewPost, INewTeam, INewUser, IUpdatePost, IUpdateUser } from "@/types";
+import { useUserContext } from "@/context/AuthContext";
 
 // ============================================================
 // AUTH QUERIES
@@ -50,7 +58,45 @@ export const useSignOutAccount = () => {
     mutationFn: signOutAccount,
   });
 };
+// ============================================================
+// FOLLOWERS QUERIES
+// ============================================================
+export const useFollow = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (followers: Followers) => newFollow(followers),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.CREATE_FOLLOWER],
+      });
+    },
+  });
+};
 
+export const useUnFollow = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (followers: Followers) => unFollow(followers),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.REMOVE_FOLLOW],
+      });
+    },
+  });
+};
+
+export const userGetFollowers = (userId: string) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.GET_FOLLOWERS, userId],
+    queryFn: () => getAllFollowers(userId),
+  });
+};
+export const userGetFollowing = (userId: string) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.GET_FOLLOWING, userId],
+    queryFn: () => getAllFollowing(userId),
+  });
+};
 // ============================================================
 // POST QUERIES
 // ============================================================
@@ -216,9 +262,11 @@ export const useGetCurrentUser = () => {
 };
 
 export const useGetUsers = (limit?: number) => {
+  const { user } = useUserContext();
+
   return useQuery({
     queryKey: [QUERY_KEYS.GET_USERS],
-    queryFn: () => getUsers(limit),
+    queryFn: () => getUsers(user.id, limit),
   });
 };
 
@@ -242,5 +290,36 @@ export const useUpdateUser = () => {
         queryKey: [QUERY_KEYS.GET_USER_BY_ID, data?.$id],
       });
     },
+  });
+};
+
+
+// teams
+
+export const useCreateTeams = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (post: INewTeam) => createTeam(post),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.CREATE_TEAM],
+      });
+    },
+  });
+};
+
+export const useGetUserTeams = (userId: string) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.GET_USER_TEAMS, userId],
+    queryFn: () => getUserTeams(userId),
+    enabled: !!userId,
+  });
+};
+
+export const useGetTeam = (userId?: string) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.GET_TEAM, userId],
+    queryFn: () => getTeamById(userId),
+    enabled: !!userId,
   });
 };

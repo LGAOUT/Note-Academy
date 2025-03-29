@@ -2,14 +2,19 @@ import { useCallback, useState } from "react";
 import { FileWithPath, useDropzone } from "react-dropzone";
 
 import { Button } from "@/components/ui";
-import { convertFileToUrl } from "@/lib/utils";
+import { cn, convertFileToUrl } from "@/lib/utils";
 
 type FileUploaderProps = {
   fieldChange: (files: File[]) => void;
   mediaUrl: string;
+  isTeam?: boolean;
 };
 
-const FileUploader = ({ fieldChange, mediaUrl }: FileUploaderProps) => {
+const FileUploader = ({
+  fieldChange,
+  mediaUrl,
+  isTeam = false,
+}: FileUploaderProps) => {
   const [file, setFile] = useState<File[]>([]);
   const [fileUrl, setFileUrl] = useState<string>(mediaUrl);
 
@@ -32,18 +37,23 @@ const FileUploader = ({ fieldChange, mediaUrl }: FileUploaderProps) => {
   return (
     <div
       {...getRootProps()}
-      className="flex flex-center flex-col bg-dark-3 rounded-xl cursor-pointer">
+      className="flex flex-center flex-col bg-dark-3 rounded-xl cursor-pointer h-72" > 
       <input {...getInputProps()} className="cursor-pointer" />
 
       {fileUrl ? (
         <>
-          <div className="flex flex-1 justify-center w-full p-5 lg:p-10">
-            <img src={fileUrl} alt="image" className="file_uploader-img" />
+          <div className="flex flex-1 justify-center w-full p-5 ">
+            <img src={fileUrl} alt="image" className={cn(
+            isTeam ? "team-cover-uploader-img" : "file_uploader-img"
+          )} />
           </div>
           <p className="file_uploader-label">Click or drag photo to replace</p>
         </>
       ) : (
-        <div className="file_uploader-box ">
+        <div
+          className={cn(
+            isTeam ? "team-cover-uploader-box" : "file_uploader-box"
+          )}>
           <img
             src="/assets/icons/file-upload.svg"
             width={96}

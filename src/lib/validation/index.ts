@@ -8,12 +8,13 @@ export const SignupValidation = z.object({
   username: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email(),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+  role: z.enum(['teacher', 'student']),
 });
 
 export const SigninValidation = z.object({
   email: z.string().email(),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-});
+  });
 
 export const ProfileValidation = z.object({
   file: z.custom<File[]>(),
@@ -32,3 +33,11 @@ export const PostValidation = z.object({
   location: z.string().min(1, { message: "This field is required" }).max(1000, { message: "Maximum 1000 characters." }),
   tags: z.string(),
 });
+
+// TEAMS 
+
+export const CreateFormValidation = z.object({
+  name: z.string(),
+  tags: z.string(),
+  cover_picture: z.custom<File[]>(),
+})

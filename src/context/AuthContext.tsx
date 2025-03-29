@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 import { IUser } from "@/types";
 import { getCurrentUser } from "@/lib/appwrite/api";
+import { userGetFollowers } from "@/lib/react-query/queries";
 
 export const INITIAL_USER = {
   id: "",
@@ -11,6 +12,7 @@ export const INITIAL_USER = {
   email: "",
   imageUrl: "",
   bio: "",
+  role: "",
 };
 
 const INITIAL_STATE = {
@@ -38,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<IUser>(INITIAL_USER);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
 
   const checkAuthUser = async () => {
     setIsLoading(true);
@@ -51,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: currentAccount.email,
           imageUrl: currentAccount.imageUrl,
           bio: currentAccount.bio,
+          role: currentAccount.role,
         });
         setIsAuthenticated(true);
 

@@ -2,7 +2,13 @@ import { Models } from "appwrite";
 
 // import { useToast } from "@/components/ui/use-toast";
 import { Loader, PostCard, UserCard } from "@/components/shared";
-import { useGetRecentPosts, useGetUsers } from "@/lib/react-query/queries";
+import {
+  useGetRecentPosts,
+  useGetUsers,
+  userGetFollowing,
+} from "@/lib/react-query/queries";
+import { useUserContext } from "@/context/AuthContext";
+import { useEffect, useState } from "react";
 
 const Home = () => {
   // const { toast } = useToast();
@@ -12,11 +18,16 @@ const Home = () => {
     isLoading: isPostLoading,
     isError: isErrorPosts,
   } = useGetRecentPosts();
+  const { user } = useUserContext();
+
   const {
     data: creators,
     isLoading: isUserLoading,
     isError: isErrorCreators,
   } = useGetUsers(10);
+
+  const { data: followersList } = userGetFollowing(user.id);
+
 
   if (isErrorPosts || isErrorCreators) {
     return (
@@ -56,11 +67,19 @@ const Home = () => {
           <Loader />
         ) : (
           <ul className="grid 2xl:grid-cols-2 gap-6">
-            {creators?.documents.map((creator) => (
-              <li key={creator?.$id}>
-                <UserCard user={creator} />
-              </li>
-            ))}
+            {creators?.documents
+              .map((creator) => (
+                <li key={creator?.$id}>
+                  <UserCard
+                    user={creator}
+                    isFollowed={
+                      !!followersList?.documents.filter(
+                        (follower) => creator.$id === follower.user
+                      ).length
+                    }
+                  />
+                </li>
+              ))}
           </ul>
         )}
       </div>

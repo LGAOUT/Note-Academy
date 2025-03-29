@@ -1,15 +1,24 @@
 import { useToast } from "@/components/ui/use-toast";
 import { Loader, UserCard } from "@/components/shared";
-import { useGetUsers } from "@/lib/react-query/queries";
+import { useGetUsers, userGetFollowing } from "@/lib/react-query/queries";
+import { useUserContext } from "@/context/AuthContext";
+import { useEffect } from "react";
 
 const AllUsers = () => {
   const { toast } = useToast();
-
   const { data: creators, isLoading, isError: isErrorCreators } = useGetUsers();
+  const { user } = useUserContext();
+  const { data: followersList, refetch } = userGetFollowing(user.id);
+
+  useEffect(() => {
+    return () => {
+      refetch();
+      }
+  }, [refetch]);
 
   if (isErrorCreators) {
     toast({ title: "Something went wrong." });
-    
+
     return;
   }
 
@@ -23,7 +32,14 @@ const AllUsers = () => {
           <ul className="user-grid">
             {creators?.documents.map((creator) => (
               <li key={creator?.$id} className="flex-1 min-w-[200px] w-full  ">
-                <UserCard user={creator} />
+                <UserCard
+                  user={creator}
+                  isFollowed={
+                    !!followersList?.documents.filter(
+                      (follower) => creator.$id === follower.user
+                    ).length
+                  }
+                />
               </li>
             ))}
           </ul>

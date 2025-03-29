@@ -24,9 +24,10 @@ import { useCreatePost, useUpdatePost } from "@/lib/react-query/queries";
 type PostFormProps = {
   post?: Models.Document;
   action: "Create" | "Update";
+  team_id?: string;
 };
 
-const PostForm = ({ post, action }: PostFormProps) => {
+const   PostForm = ({ post, action, team_id }: PostFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useUserContext();
@@ -69,6 +70,7 @@ const PostForm = ({ post, action }: PostFormProps) => {
     const newPost = await createPost({
       ...value,
       userId: user.id,
+      team_id: team_id ? team_id : null
     });
 
     if (!newPost) {
